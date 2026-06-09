@@ -1,11 +1,11 @@
 from flask import Flask, render_template, request, jsonify
 import requests
-from ytmusicapi import YTMusic # Nueva importación
+from ytmusicapi import YTMusic
 
 app = Flask(__name__)
 
 # ================= CONFIGURACIÓN =================
-METUBE_URL = "http://192.168.10.5:8081"
+METUBE_URL = "http://IP-APP-METUBE:8081"
 ytmusic = YTMusic() # Inicializamos el cliente de búsqueda
 # =================================================
 
