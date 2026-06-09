@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Buscador YouTube → MeTube</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .video-card { cursor: pointer; transition: transform 0.2s; }
+        .video-card:hover { transform: scale(1.02); background-color: #f8f9fa; }
+        .thumbnail { width: 120px; height: 90px; object-fit: cover; }
+        #loading { display: none; }
+    </style>
+</head>
+<body class="bg-light">
+    <div class="container py-5">
+        <h1 class="text-center mb-2">🎵 Buscador YouTube → MeTube</h1>
+        <p class="text-center text-muted mb-4">Descarga audio de tus canciones favoritas</p>
+        
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="input-group mb-3">
+                    <input type="text" id="searchInput" class="form-control form-control-lg" placeholder="Ej: Musica lofi para estudiar...">
+                    <button class="btn btn-primary" type="button" onclick="searchVideos()">Buscar</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="loading" class="text-center">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Cargando...</span>
+            </div>
+            <p>Buscando en YouTube...</p>
+        </div>
+
+        <div id="results" class="row mt-4"></div>
+    </div>
+
+    <script>
+        async function searchVideos() {
+            const query = document.getElementById('searchInput').value;
+            const resultsDiv = document.getElementById('results');
+            const loadingDiv = document.getElementById('loading');
+            
+            if (!query) return alert('Escribe algo para buscar');
+
+            resultsDiv.innerHTML = '';
+            loadingDiv.style.display = 'block';
+
+            try {
+                const formData = new FormData();
+                formData.append('query', query);
+
+                const response = await fetch('/search', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+                loadingDiv.style.display = 'none';
+
+                if (data.error) {
+                    alert('Error: ' + data.error);
+                    return;
+                }
+
+                if (data.results.length === 0) {
+                    resultsDiv.innerHTML = '<div class="col-12 text-center text-muted">No se encontraron resultados</div>';
+                    return;
+                }
+
+                data.results.forEach((video, index) => {
+                    const col = document.createElement('div');
+                    col.className = 'col-md-6 mb-3';
+                    col.innerHTML = `
+                        <div class="card video-card p-2" data-url="${video.url}">
+                            <div class="d-flex align-items-center">
+                                <img src="${video.thumbnail}" class="thumbnail rounded me-3">
+                                <div>
+                                    <h6 class="mb-1 text-truncate" style="max-width: 300px;">${video.title}</h6>
+                                    <small class="text-muted">Duración: ${video.duration}</small>
+                                    <div><span class="badge bg-success">Click para descargar</span></div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    col.querySelector('.video-card').addEventListener('click', function() {
+                        sendToMetube(this.getAttribute('data-url'));
+                    });
+                    resultsDiv.appendChild(col);
+                });
+
+            } catch (error) {
+                loadingDiv.style.display = 'none';
+                alert('Error de conexión');
+                console.error(error);
+            }
+        }
+
+        async function sendToMetube(url) {
+            if(!confirm('¿Enviar este video a MeTube para descargar el audio MP3?')) return;
+
+            console.log('URL a enviar:', url);
+
+            try {
+                const response = await fetch('/download', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url: url })
+                });
+                
+                const data = await response.json();
+                console.log('Respuesta:', data);
+                
+                if (data.status === 'success') {
+                    alert('✅ ¡Enviado a MeTube correctamente!');
+                } else {
+                    alert('❌ Error al enviar: ' + (data.message || 'Error desconocido'));
+                }
+            } catch (error) {
+                alert('Error de conexión: ' + error.message);
+            }
+        }
+
+        document.getElementById('searchInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') searchVideos();
+        });
+    </script>
+</body>
+</html>
